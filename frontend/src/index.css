@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #0a0e16;
+  color: #f6f7fa;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(252, 167, 0, 0.32);
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Cormorant Garamond', serif;
+  }
+  .font-script-te {
+    font-family: 'Noto Sans Telugu', 'Inter', system-ui, sans-serif;
+  }
+  .font-script-hi {
+    font-family: 'Noto Sans Devanagari', 'Inter', system-ui, sans-serif;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+}

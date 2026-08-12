@@ -1,0 +1,28 @@
+export const adminBrand = {
+  name: 'BYRGOP',
+  tagline: 'Business Profit Architects',
+  logo: '/byrgop-logo.png',
+  palette: {
+    blue: { 400: '#3D97DB', 500: '#0A78CF', 600: '#0861AA' },
+    green: { 400: '#2DA363', 500: '#0D8845', 600: '#0A7039' },
+    orange: { 400: '#F67F39', 500: '#F5630D', 600: '#D4540A' },
+    yellow: { 400: '#FCB22E', 500: '#FCA700', 600: '#D88D00' },
+    red: { 400: '#EB5564', 500: '#E52032', 600: '#C31B2A' },
+    purple: { 400: '#8C56BB', 500: '#7038A5', 600: '#5C2E89' },
+  },
+  ink: {
+    950: '#06080E',
+    900: '#0A0E16',
+    850: '#0D1220',
+    800: '#111728',
+    700: '#1A2336',
+  },
+  accent: '#FCA700',
+  accentHover: '#FCB22E',
+  text: '#E9EBF1',
+  textMuted: 'rgba(233,235,241,0.55)',
+  surface: 'rgba(255,255,255,0.04)',
+  border: 'rgba(255,255,255,0.10)',
+  danger: '#E52032',
+  success: '#0D8845',
+};
