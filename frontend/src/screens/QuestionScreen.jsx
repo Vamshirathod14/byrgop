@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import BrandLockup from '../components/BrandLockup.jsx';
 import Timer from '../components/Timer.jsx';
 import { brand } from '../theme/brand.js';
 
 const ease = [0.22, 1, 0.36, 1];
+const six = brand.mark;
 
 function matchOption(question, prefix) {
   return (question.options || []).find((o) =>
@@ -63,15 +63,19 @@ export default function QuestionScreen({ question, index, total, onAnswer, onTim
       className="relative flex items-center justify-center overflow-hidden rounded-2xl border py-7 font-display text-2xl font-semibold uppercase tracking-[0.14em] transition-colors duration-300 sm:text-3xl"
       style={{
         borderColor:
-          selected === option?.optionId ? cat.color : tone === 'yes' ? `${cat.color}66` : 'rgba(255,255,255,0.12)',
+          selected === option?.optionId 
+            ? cat.color 
+            : 'rgba(255,255,255,0.12)',
         background:
           selected === option?.optionId
             ? `linear-gradient(135deg, ${cat.color}38, transparent)`
-            : tone === 'yes'
-              ? `${cat.color}12`
-              : 'rgba(255,255,255,0.03)',
-        color: selected === option?.optionId ? cat.color : tone === 'yes' ? cat.color : 'rgba(246,247,250,0.72)',
-        boxShadow: selected === option?.optionId ? `0 0 28px ${cat.color}44` : 'none',
+            : 'rgba(255,255,255,0.03)',
+        color: selected === option?.optionId 
+          ? cat.color 
+          : 'rgba(246,247,250,0.72)',
+        boxShadow: selected === option?.optionId 
+          ? `0 0 28px ${cat.color}44` 
+          : 'none',
       }}
     >
       {selected === option?.optionId && (
@@ -90,8 +94,72 @@ export default function QuestionScreen({ question, index, total, onAnswer, onTim
 
   return (
     <div className="flex min-h-screen flex-col px-6 py-7 sm:px-10">
-      <header className="flex items-center justify-between">
-        <BrandLockup markHeight={40} showTagline={false} showBilingual={false} />
+      {/* Logo - Top Left */}
+      <motion.div
+        className="absolute top-6 left-6 z-10"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease }}
+      >
+        <img
+          src="/logo.jpg"
+          alt="Business Profit Architects"
+          className="h-12 w-auto object-contain drop-shadow-lg"
+        />
+      </motion.div>
+
+      {/* Telugu & Hindi - Top Right */}
+      <motion.div
+        className="absolute top-6 right-6 z-10 flex flex-col items-end gap-0.5"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease }}
+      >
+        <motion.span
+          className="text-lg font-semibold tracking-wider leading-none"
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          <motion.span
+            className="inline-block"
+            animate={{
+              color: six,
+              transition: {
+                duration: 6,
+                repeat: Infinity,
+                ease: "linear"
+              }
+            }}
+          >
+            బిర్ గాప్
+          </motion.span>
+        </motion.span>
+        <motion.span
+          className="text-lg font-semibold tracking-wider leading-none"
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
+          <motion.span
+            className="inline-block"
+            animate={{
+              color: six,
+              transition: {
+                duration: 6,
+                repeat: Infinity,
+                ease: "linear",
+                delay: 1
+              }
+            }}
+          >
+            बिरगाप
+          </motion.span>
+        </motion.span>
+      </motion.div>
+
+      {/* Progress Bar - Top Center */}
+      <header className="flex items-center justify-center">
         <div className="flex items-center gap-2">
           {brand.steps.map((s, i) => (
             <div key={s.key} className="flex items-center gap-2">

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sector } from 'recharts';
-import BrandLockup from '../components/BrandLockup.jsx';
 import PrimaryButton from '../components/PrimaryButton.jsx';
 import { brand } from '../theme/brand.js';
 
 const ease = [0.22, 1, 0.36, 1];
+const six = brand.mark;
 
 function HoverPopup({ data }) {
   if (!data) return null;
@@ -95,8 +95,72 @@ export default function ResultScreen({ result }) {
 
   return (
     <div className="flex min-h-screen flex-col px-6 py-7 sm:px-10">
-      <header className="flex items-center justify-between">
-        <BrandLockup markHeight={40} showTagline={false} showBilingual={false} />
+      {/* Logo - Top Left */}
+      <motion.div
+        className="absolute top-6 left-6 z-10"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease }}
+      >
+        <img
+          src="/logo.jpg"
+          alt="Business Profit Architects"
+          className="h-12 w-auto object-contain drop-shadow-lg"
+        />
+      </motion.div>
+
+      {/* Telugu & Hindi - Top Right */}
+      <motion.div
+        className="absolute top-6 right-6 z-10 flex flex-col items-end gap-0.5"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease }}
+      >
+        <motion.span
+          className="text-lg font-semibold tracking-wider leading-none"
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          <motion.span
+            className="inline-block"
+            animate={{
+              color: six,
+              transition: {
+                duration: 6,
+                repeat: Infinity,
+                ease: "linear"
+              }
+            }}
+          >
+            బిర్ గాప్
+          </motion.span>
+        </motion.span>
+        <motion.span
+          className="text-lg font-semibold tracking-wider leading-none"
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        >
+          <motion.span
+            className="inline-block"
+            animate={{
+              color: six,
+              transition: {
+                duration: 6,
+                repeat: Infinity,
+                ease: "linear",
+                delay: 1
+              }
+            }}
+          >
+            बिरगाप
+          </motion.span>
+        </motion.span>
+      </motion.div>
+
+      {/* Header - Top Center */}
+      <header className="flex items-center justify-center">
         <span className="text-[10px] uppercase tracking-[0.28em] text-mist-muted">
           Diagnostic complete
         </span>
