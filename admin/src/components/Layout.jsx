@@ -1,6 +1,7 @@
 const TABS = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'questions', label: 'Questions' },
+  { key: 'kyQuestions', label: 'Know Yourself' },
   { key: 'categories', label: 'Categories' },
   { key: 'stages', label: 'Stages' },
   { key: 'results', label: 'Results' },

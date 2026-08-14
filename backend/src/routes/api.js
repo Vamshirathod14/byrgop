@@ -6,6 +6,8 @@ import { listStages, getStage, createStage, updateStage, deleteStage } from '../
 import { listQuestions, getQuestion, createQuestion, updateQuestion, deleteQuestion } from '../controllers/questionController.js';
 import { listResults, createResult, updateResult, deleteResult } from '../controllers/resultController.js';
 import { listSessions, getSession, sessionStats } from '../controllers/sessionController.js';
+import { listKYQuestions, getKYQuestion, createKYQuestion, updateKYQuestion, deleteKYQuestion } from '../controllers/knowYourselfController.js';
+import { startKYSession, getKYQuestion as getKYSessionQuestion, submitKYAnswer, getKYResult } from '../controllers/knowYourselfSessionController.js';
 
 const router = Router();
 
@@ -44,5 +46,18 @@ router.get('/admin/results', listResults);
 router.post('/admin/results', createResult);
 router.put('/admin/results/:id', updateResult);
 router.delete('/admin/results/:id', deleteResult);
+
+// Know Yourself – public assessment
+router.post('/know-yourself', startKYSession);
+router.get('/know-yourself/:sessionId/question/:index', getKYSessionQuestion);
+router.post('/know-yourself/:sessionId/answer', submitKYAnswer);
+router.get('/know-yourself/:sessionId/result', getKYResult);
+
+// Know Yourself – admin CRUD
+router.get('/admin/know-yourself', listKYQuestions);
+router.get('/admin/know-yourself/:id', getKYQuestion);
+router.post('/admin/know-yourself', createKYQuestion);
+router.put('/admin/know-yourself/:id', updateKYQuestion);
+router.delete('/admin/know-yourself/:id', deleteKYQuestion);
 
 export default router;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Layout from './components/Layout.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Questions from './pages/Questions.jsx';
+import KnowYourselfQuestions from './pages/KnowYourselfQuestions.jsx';
 import Categories from './pages/Categories.jsx';
 import Stages from './pages/Stages.jsx';
 import Results from './pages/Results.jsx';
@@ -14,6 +15,7 @@ export default function App() {
     <Layout active={tab} onNavigate={setTab}>
       {tab === 'dashboard' && <Dashboard />}
       {tab === 'questions' && <Questions />}
+      {tab === 'kyQuestions' && <KnowYourselfQuestions />}
       {tab === 'categories' && <Categories />}
       {tab === 'stages' && <Stages />}
       {tab === 'results' && <Results />}

@@ -67,7 +67,7 @@ function HoverPopup({ data }) {
   );
 }
 
-export default function ResultScreen({ result }) {
+export default function ResultScreen({ result, onKY }) {
   const [activeIndex, setActiveIndex] = useState(null);
 
   const totalPossible = result?.overallPossible || 0;
@@ -310,14 +310,29 @@ export default function ResultScreen({ result }) {
           </div>
         </motion.div>
 
+        {/* Question Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.5, ease }}
+          className="mt-12 flex flex-col items-center"
+        >
+          <h2 className="font-display text-2xl font-semibold text-white text-center sm:text-3xl">
+            Know more about ?
+          </h2>
+          <p className="mt-2 text-sm text-white/50 text-center">
+            Choose an option below to continue your journey
+          </p>
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.6, ease }}
-          className="mt-11 flex flex-col items-center gap-3 sm:flex-row"
+          className="mt-6 flex flex-col items-center gap-3 sm:flex-row"
         >
-          <PrimaryButton onClick={() => window.open('#', '_blank')} className="min-w-[13rem]">
-            Know Yourself
+          <PrimaryButton onClick={onKY} className="min-w-[13rem]">
+            Your Business
           </PrimaryButton>
           <PrimaryButton
             variant="dark"

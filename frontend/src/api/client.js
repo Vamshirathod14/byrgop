@@ -22,6 +22,12 @@ export const api = {
   reportTimeout: (sessionId, payload) =>
     request(`/assessments/${sessionId}/timeout`, { method: 'POST', body: JSON.stringify(payload) }),
   getResult: (sessionId) => request(`/assessments/${sessionId}/result`),
+
+  startKY: () => request('/know-yourself', { method: 'POST' }),
+  kyQuestion: (sessionId, index) => request(`/know-yourself/${sessionId}/question/${index}`),
+  submitKYAnswer: (sessionId, payload) =>
+    request(`/know-yourself/${sessionId}/answer`, { method: 'POST', body: JSON.stringify(payload) }),
+  kyResult: (sessionId) => request(`/know-yourself/${sessionId}/result`),
 };
 
 export default api;

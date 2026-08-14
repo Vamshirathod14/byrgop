@@ -5,6 +5,8 @@ import AnimatedBackground from './components/AnimatedBackground.jsx';
 import IntroScreen from './screens/IntroScreen.jsx';
 import QuestionScreen from './screens/QuestionScreen.jsx';
 import ResultScreen from './screens/ResultScreen.jsx';
+import KnowYourselfScreen from './screens/KnowYourselfScreen.jsx';
+import KnowYourselfResult from './screens/KnowYourselfResult.jsx';
 import { brand } from './theme/brand.js';
 
 const ease = [0.22, 1, 0.36, 1];
@@ -19,6 +21,16 @@ export default function App() {
   const [error, setError] = useState(null);
   const [finalizeError, setFinalizeError] = useState(false);
   const fetchingRef = useRef(false);
+
+  // Know Yourself state
+  const [kySessionId, setKySessionId] = useState(null);
+  const [kyQuestions, setKyQuestions] = useState([]);
+  const [kyIndex, setKyIndex] = useState(0);
+  const [kyQuestion, setKyQuestion] = useState(null);
+  const [kyResult, setKyResult] = useState(null);
+  const kyFetchingRef = useRef(false);
+
+  // ─── Onboarding ──────────────────────────────────────────
 
   const fetchQuestion = useCallback(
     async (sid, categoryKey) => {
@@ -114,6 +126,80 @@ export default function App() {
     [question, sessionId, index, categories, fetchQuestion, rerollSameCategory, finalize]
   );
 
+  // ─── Know Yourself ───────────────────────────────────────
+
+  const fetchKYQuestion = useCallback(
+    async (sid, qIndex) => {
+      if (kyFetchingRef.current) return;
+      kyFetchingRef.current = true;
+      setError(null);
+      try {
+        const data = await api.kyQuestion(sid, qIndex);
+        setKyQuestion(data.question);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        kyFetchingRef.current = false;
+      }
+    },
+    []
+  );
+
+  const handleBeginKY = useCallback(async () => {
+    setError(null);
+    try {
+      const session = await api.startKY();
+      setKySessionId(session.sessionId);
+      setKyQuestions(session.questions);
+      setKyIndex(0);
+      setKyQuestion(session.questions[0]);
+      setScreen('kyQuestion');
+    } catch (e) {
+      setError(e.message);
+    }
+  }, []);
+
+  const handleKYAnswer = useCallback(
+    async (optionId) => {
+      if (!kyQuestion || !kySessionId) return;
+      try {
+        const res = await api.submitKYAnswer(kySessionId, {
+          questionIndex: kyIndex,
+          optionId,
+        });
+
+        if (res.complete) {
+          setScreen('kyCalculating');
+          try {
+            const r = await api.kyResult(kySessionId);
+            setKyResult(r);
+            setScreen('kyResult');
+          } catch (e) {
+            setError(e.message);
+          }
+        } else {
+          const next = kyIndex + 1;
+          setKyIndex(next);
+          setKyQuestion(kyQuestions[next]);
+        }
+      } catch (e) {
+        setError(e.message);
+      }
+    },
+    [kyQuestion, kySessionId, kyIndex, kyQuestions]
+  );
+
+  const handleKYExplore = useCallback(() => {
+    setScreen('intro');
+    setKySessionId(null);
+    setKyQuestions([]);
+    setKyIndex(0);
+    setKyQuestion(null);
+    setKyResult(null);
+  }, []);
+
+  // ─── Error auto-clear ────────────────────────────────────
+
   useEffect(() => {
     if (error) {
       const t = setTimeout(() => setError(null), 4000);
@@ -121,10 +207,13 @@ export default function App() {
     }
   }, [error]);
 
+  // ─── Render ──────────────────────────────────────────────
+
   return (
     <div className="min-h-screen text-mist">
       <AnimatedBackground />
       <AnimatePresence mode="wait">
+        {/* ── Onboarding ── */}
         {screen === 'intro' && (
           <motion.div
             key="intro"
@@ -204,7 +293,70 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ResultScreen result={result} />
+            <ResultScreen result={result} onKY={handleBeginKY} />
+          </motion.div>
+        )}
+
+        {/* ── Know Yourself ── */}
+        {screen === 'kyQuestion' && kyQuestion && (
+          <motion.div
+            key={`ky-q-${kyIndex}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.985 }}
+            transition={{ duration: 0.45 }}
+          >
+            <KnowYourselfScreen
+              question={kyQuestion}
+              index={kyIndex}
+              total={20}
+              onAnswer={handleKYAnswer}
+            />
+          </motion.div>
+        )}
+
+        {screen === 'kyCalculating' && (
+          <motion.div
+            key="ky-calculating"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.985 }}
+            transition={{ duration: 0.45 }}
+            className="flex min-h-screen flex-col items-center justify-center px-6 text-center"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6, ease }}
+              className="relative flex h-20 w-20 items-center justify-center"
+            >
+              <div
+                className="absolute inset-0 rounded-full blur-xl"
+                style={{ background: `${brand.accent}22` }}
+              />
+              <div
+                className="h-14 w-14 animate-spin rounded-full border-2"
+                style={{ borderColor: 'rgba(255,255,255,0.12)', borderTopColor: brand.accent }}
+              />
+            </motion.div>
+            <h1 className="font-display mt-8 text-3xl font-semibold text-mist sm:text-4xl">
+              Calculating your Know Yourself result
+            </h1>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-mist-muted">
+              Scoring your 20 responses.
+            </p>
+          </motion.div>
+        )}
+
+        {screen === 'kyResult' && kyResult && (
+          <motion.div
+            key="ky-result"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <KnowYourselfResult result={kyResult} onExplore={handleKYExplore} />
           </motion.div>
         )}
       </AnimatePresence>

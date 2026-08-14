@@ -40,6 +40,11 @@ export const api = {
   createResult: json('POST'),
   updateResult: json('PUT'),
   deleteResult: del,
+
+  kyQuestions: () => request('/admin/know-yourself?includeInactive=true'),
+  createKYQuestion: json('POST'),
+  updateKYQuestion: json('PUT'),
+  deleteKYQuestion: del,
 };
 
 export default api;
