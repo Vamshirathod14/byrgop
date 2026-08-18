@@ -42,6 +42,8 @@ export const api = {
   deleteResult: del,
 
   kyQuestions: () => request('/admin/know-yourself?includeInactive=true'),
+  kyDomains: () => request('/know-yourself/domains'),
+  kySessions: (status) => request(`/admin/know-yourself/sessions${status ? `?status=${status}` : ''}`),
   createKYQuestion: json('POST'),
   updateKYQuestion: json('PUT'),
   deleteKYQuestion: del,

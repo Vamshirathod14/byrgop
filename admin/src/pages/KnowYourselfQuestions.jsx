@@ -10,15 +10,19 @@ const defaultOptions = [
 
 const empty = {
   text: '',
+  type: 'generic',
+  domain: '',
   active: true,
   options: defaultOptions.map((o) => ({ ...o })),
 };
 
-function KYQuestionForm({ initial, onCancel, onSaved }) {
+function KYQuestionForm({ initial, domains, onCancel, onSaved }) {
   const [form, setForm] = useState(() =>
     initial
       ? {
           text: initial.text,
+          type: initial.type || 'generic',
+          domain: initial.domain || '',
           active: initial.active,
           options: initial.options.map((o) => ({ text: o.text, score: o.score, active: o.active })),
         }
@@ -38,6 +42,8 @@ function KYQuestionForm({ initial, onCancel, onSaved }) {
     try {
       const payload = {
         text: form.text,
+        type: form.type,
+        domain: form.type === 'domain' ? form.domain : null,
         active: form.active,
         options: form.options.map((o) => ({
           text: o.text,
@@ -68,6 +74,40 @@ function KYQuestionForm({ initial, onCancel, onSaved }) {
           onChange={(e) => set({ text: e.target.value })}
           required
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-mist-muted">
+            Question Type
+          </label>
+          <select
+            className="input"
+            value={form.type}
+            onChange={(e) => set({ type: e.target.value, domain: e.target.value === 'generic' ? '' : form.domain })}
+          >
+            <option value="generic">Generic</option>
+            <option value="domain">Domain</option>
+          </select>
+        </div>
+        {form.type === 'domain' && (
+          <div>
+            <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-mist-muted">
+              Domain
+            </label>
+            <select
+              className="input"
+              value={form.domain}
+              onChange={(e) => set({ domain: e.target.value })}
+              required
+            >
+              <option value="" disabled>Select domain</option>
+              {domains.map((d) => (
+                <option key={d.key} value={d.key}>{d.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div>
@@ -143,14 +183,17 @@ function KYQuestionForm({ initial, onCancel, onSaved }) {
 
 export default function KnowYourselfQuestions() {
   const [questions, setQuestions] = useState([]);
+  const [domains, setDomains] = useState([]);
   const [editing, setEditing] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [filterType, setFilterType] = useState('all');
   const [err, setErr] = useState(null);
 
   const load = useCallback(async () => {
     try {
-      const qs = await api.kyQuestions();
+      const [qs, doms] = await Promise.all([api.kyQuestions(), api.kyDomains()]);
       setQuestions(qs);
+      setDomains(doms);
     } catch (e) {
       setErr(e.message);
     }
@@ -170,7 +213,13 @@ export default function KnowYourselfQuestions() {
     }
   };
 
-  const activeCount = questions.filter((q) => q.active).length;
+  const filtered = filterType === 'all' ? questions : questions.filter((q) => q.type === filterType);
+  const genericCount = questions.filter((q) => q.type === 'generic' || !q.type).length;
+  const domainCount = questions.filter((q) => q.type === 'domain').length;
+  const activeGeneric = questions.filter((q) => (q.type === 'generic' || !q.type) && q.active).length;
+  const activeDomain = questions.filter((q) => q.type === 'domain' && q.active).length;
+
+  const domainLabel = (key) => domains.find((d) => d.key === key)?.label || key;
 
   return (
     <div>
@@ -178,9 +227,12 @@ export default function KnowYourselfQuestions() {
         <div>
           <h1 className="font-display text-3xl font-semibold text-mist">Know Yourself</h1>
           <p className="mt-1 text-sm text-mist-muted">
-            {questions.length} questions · {activeCount} active
-            {activeCount < 20 && (
-              <span className="ml-2 text-[#f87171]">(need at least 20 active)</span>
+            {genericCount} generic ({activeGeneric} active) · {domainCount} domain ({activeDomain} active)
+            {activeGeneric < 10 && (
+              <span className="ml-2 text-[#f87171]">(need 10+ generic)</span>
+            )}
+            {activeDomain < 10 && domainCount > 0 && (
+              <span className="ml-2 text-[#f87171]">(need 10+ per domain)</span>
             )}
           </p>
         </div>
@@ -189,11 +241,33 @@ export default function KnowYourselfQuestions() {
         </button>
       </div>
 
+      {/* Filter tabs */}
+      <div className="mt-4 flex gap-2">
+        {[
+          { key: 'all', label: 'All' },
+          { key: 'generic', label: 'Generic' },
+          { key: 'domain', label: 'Domain' },
+        ].map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilterType(f.key)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              filterType === f.key
+                ? 'bg-brand-accent/15 text-brand-accent'
+                : 'text-mist-muted hover:bg-white/5 hover:text-mist'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {err && <p className="mt-3 text-sm text-[#f87171]">{err}</p>}
 
       {showCreate && (
         <div className="mt-5">
           <KYQuestionForm
+            domains={domains}
             onCancel={() => setShowCreate(false)}
             onSaved={async () => {
               setShowCreate(false);
@@ -204,12 +278,13 @@ export default function KnowYourselfQuestions() {
       )}
 
       <div className="mt-6 space-y-3">
-        {questions.length === 0 && <p className="text-mist-muted">No questions yet.</p>}
-        {questions.map((q) => (
+        {filtered.length === 0 && <p className="text-mist-muted">No questions yet.</p>}
+        {filtered.map((q) => (
           <div key={q._id} className="card">
             {editing?._id === q._id ? (
               <KYQuestionForm
                 initial={q}
+                domains={domains}
                 onCancel={() => setEditing(null)}
                 onSaved={async () => {
                   setEditing(null);
@@ -220,6 +295,18 @@ export default function KnowYourselfQuestions() {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`badge ${
+                        q.type === 'domain' ? 'bg-purple-500/15 text-purple-400' : 'bg-blue-500/15 text-blue-400'
+                      }`}
+                    >
+                      {q.type === 'domain' ? 'Domain' : 'Generic'}
+                    </span>
+                    {q.type === 'domain' && q.domain && (
+                      <span className="badge bg-white/10 text-mist text-[10px]">
+                        {domainLabel(q.domain)}
+                      </span>
+                    )}
                     <span
                       className={`badge ${
                         q.active ? 'bg-[#4ade80]/15 text-[#4ade80]' : 'bg-[#f87171]/15 text-[#f87171]'

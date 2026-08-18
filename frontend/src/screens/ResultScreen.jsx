@@ -67,7 +67,7 @@ function HoverPopup({ data }) {
   );
 }
 
-export default function ResultScreen({ result, onKY }) {
+export default function ResultScreen({ result, onKY, onAbout }) {
   const [activeIndex, setActiveIndex] = useState(null);
 
   const totalPossible = result?.overallPossible || 0;
@@ -336,7 +336,7 @@ export default function ResultScreen({ result, onKY }) {
           </PrimaryButton>
           <PrimaryButton
             variant="dark"
-            onClick={() => window.open('#', '_blank')}
+            onClick={onAbout}
             className="min-w-[13rem]"
           >
             BYRGOP

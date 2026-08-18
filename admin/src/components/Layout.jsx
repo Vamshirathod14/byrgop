@@ -2,6 +2,7 @@ const TABS = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'questions', label: 'Questions' },
   { key: 'kyQuestions', label: 'Know Yourself' },
+  { key: 'kySessions', label: 'KY Submissions' },
   { key: 'categories', label: 'Categories' },
   { key: 'stages', label: 'Stages' },
   { key: 'results', label: 'Results' },

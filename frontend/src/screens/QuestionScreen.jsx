@@ -12,10 +12,13 @@ function matchOption(question, prefix) {
   );
 }
 
-export default function QuestionScreen({ question, index, total, onAnswer, onTimeout }) {
+export default function QuestionScreen({ question, index, total, onAnswer, onTimeout, onRestart }) {
   const [secondsLeft, setSecondsLeft] = useState(question.timeoutSeconds);
   const [selected, setSelected] = useState(null);
   const [tick, setTick] = useState(0);
+
+  // Premium Gold Color - #c68505
+  const goldColor = '#c68505';
 
   const cat = brand.categories[question.category] || {
     name: question.category,
@@ -40,9 +43,12 @@ export default function QuestionScreen({ question, index, total, onAnswer, onTim
   useEffect(() => {
     if (secondsLeft <= 0 && tick === 0 && !selected) {
       setTick(1);
-      onTimeout?.();
+      // Go back to intro page when timer hits zero
+      if (onRestart) {
+        onRestart();
+      }
     }
-  }, [secondsLeft, tick, selected, onTimeout]);
+  }, [secondsLeft, tick, selected, onRestart]);
 
   const handleSelect = (optionId) => {
     if (selected || optionId == null) return;
@@ -192,7 +198,11 @@ export default function QuestionScreen({ question, index, total, onAnswer, onTim
               className="flex w-full flex-col items-center"
             >
               <div className="mb-10">
-                <Timer secondsLeft={secondsLeft} total={question.timeoutSeconds} color={cat.color} />
+                <Timer 
+                  secondsLeft={secondsLeft} 
+                  total={question.timeoutSeconds} 
+                  color={goldColor}
+                />
               </div>
 
               <h1 className="font-display max-w-2xl text-balance text-center text-3xl font-semibold leading-snug text-mist sm:text-[2.6rem] sm:leading-tight">

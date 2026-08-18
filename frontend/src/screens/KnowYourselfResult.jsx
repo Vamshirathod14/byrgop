@@ -1,10 +1,17 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import PrimaryButton from '../components/PrimaryButton.jsx';
+import api from '../api/client.js';
 import { brand } from '../theme/brand.js';
 
 const ease = [0.22, 1, 0.36, 1];
 
-export default function KnowYourselfResult({ result, onExplore }) {
+const normalizePhone = (value) => {
+  const digits = (value || '').replace(/[^\d]/g, '');
+  return digits.length >= 7 && digits.length <= 15;
+};
+
+export default function KnowYourselfResult({ result, sessionId, onExplore }) {
   const { result: data } = result;
   const score = data?.score ?? 0;
   const maxScore = data?.maxScore ?? 80;
@@ -13,6 +20,14 @@ export default function KnowYourselfResult({ result, onExplore }) {
 
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
+  const [phone, setPhone] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const canSubmit = normalizePhone(phone) && consent;
+
   const getBandColor = (b) => {
     if (b === 'STRONG FOUNDATION') return '#4ade80';
     if (b === 'MODERATE PERFORMANCE') return '#facc15';
@@ -20,6 +35,21 @@ export default function KnowYourselfResult({ result, onExplore }) {
     return '#f87171';
   };
   const bandColor = getBandColor(band);
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await api.submitKYContact(sessionId, { phone, contactConsent: true });
+      setSubmitted(true);
+    } catch (e) {
+      setErr(e.message);
+      setSubmitted(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col px-6 py-7 sm:px-10">
@@ -179,6 +209,69 @@ export default function KnowYourselfResult({ result, onExplore }) {
           <PrimaryButton onClick={onExplore} className="min-w-[13rem]">
             Explore BYRGOP
           </PrimaryButton>
+        </motion.div>
+
+        {/* Contact form / confirmation */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 1.8, ease }}
+          className="mt-12 w-full max-w-md"
+        >
+          {submitted ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-8 text-center">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease }}
+                className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full"
+                style={{ background: `${brand.palette.green[500]}22` }}
+              >
+                <span className="text-2xl" style={{ color: brand.palette.green[400] }}>✓</span>
+              </motion.div>
+              <h3 className="font-display text-xl font-semibold text-mist">
+                Thank you. Our team will be in touch with you.
+              </h3>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-7">
+              <span className="mb-3 block text-[11px] uppercase tracking-[0.3em] text-mist-muted">
+                Request a call
+              </span>
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-mist-muted">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="+91 98765 43210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full rounded-xl border border-white/[0.12] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-colors focus:border-white/25"
+                  />
+                </div>
+                <label className="flex items-start gap-3 text-sm leading-relaxed text-mist-muted">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    className="mt-1 h-4 w-4 accent-[#FCA700]"
+                  />
+                  I would like to be contacted by the BYRGOP team.
+                </label>
+                {err && <p className="text-xs text-[#f87171]">{err}</p>}
+                <PrimaryButton
+                  onClick={handleSubmit}
+                  disabled={!canSubmit || submitting}
+                  className="w-full"
+                >
+                  {submitting ? 'Submitting…' : 'Request a Call'}
+                </PrimaryButton>
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

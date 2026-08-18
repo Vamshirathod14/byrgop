@@ -1,9 +1,18 @@
-import KnowYourselfQuestion from '../models/KnowYourselfQuestion.js';
+import KnowYourselfQuestion, { DOMAIN_KEYS, DOMAIN_LABELS } from '../models/KnowYourselfQuestion.js';
+
+export const listKYDomains = async (_req, res, next) => {
+  try {
+    const domains = DOMAIN_KEYS.map((key) => ({ key, label: DOMAIN_LABELS[key] }));
+    res.json(domains);
+  } catch (err) { next(err); }
+};
 
 export const listKYQuestions = async (req, res, next) => {
   try {
     const filter = {};
     if (req.query.includeInactive !== 'true') filter.active = true;
+    if (req.query.type) filter.type = req.query.type;
+    if (req.query.domain) filter.domain = req.query.domain;
     const questions = await KnowYourselfQuestion.find(filter).sort({ createdAt: -1 });
     res.json(questions);
   } catch (err) { next(err); }
@@ -19,7 +28,7 @@ export const getKYQuestion = async (req, res, next) => {
 
 export const createKYQuestion = async (req, res, next) => {
   try {
-    const { text, options, active } = req.body;
+    const { text, options, active, type, domain } = req.body;
     if (!text || !text.trim()) return res.status(400).json({ error: 'Question text is required' });
     if (!options || options.length !== 4) return res.status(400).json({ error: 'Exactly 4 options are required' });
     for (const o of options) {
@@ -27,7 +36,9 @@ export const createKYQuestion = async (req, res, next) => {
       const s = Number(o.score);
       if (!Number.isInteger(s) || s < 1 || s > 4) return res.status(400).json({ error: 'Each option score must be 1, 2, 3, or 4' });
     }
-    const q = await KnowYourselfQuestion.create({ text: text.trim(), options, active: active !== false });
+    const qType = type === 'domain' ? 'domain' : 'generic';
+    const qDomain = qType === 'domain' && DOMAIN_KEYS.includes(domain) ? domain : null;
+    const q = await KnowYourselfQuestion.create({ text: text.trim(), options, active: active !== false, type: qType, domain: qDomain });
     res.status(201).json(q);
   } catch (err) { next(err); }
 };
@@ -36,9 +47,15 @@ export const updateKYQuestion = async (req, res, next) => {
   try {
     const q = await KnowYourselfQuestion.findById(req.params.id);
     if (!q) return res.status(404).json({ error: 'Question not found' });
-    const { text, options, active } = req.body;
+    const { text, options, active, type, domain } = req.body;
     if (text !== undefined) q.text = text.trim();
     if (active !== undefined) q.active = active;
+    if (type !== undefined) q.type = type === 'domain' ? 'domain' : 'generic';
+    if (q.type === 'domain' && domain !== undefined) {
+      q.domain = DOMAIN_KEYS.includes(domain) ? domain : null;
+    } else if (q.type === 'generic') {
+      q.domain = null;
+    }
     if (options !== undefined) {
       if (options.length !== 4) return res.status(400).json({ error: 'Exactly 4 options are required' });
       for (const o of options) {

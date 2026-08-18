@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import api from './api/client.js';
 import AnimatedBackground from './components/AnimatedBackground.jsx';
 import IntroScreen from './screens/IntroScreen.jsx';
 import QuestionScreen from './screens/QuestionScreen.jsx';
 import ResultScreen from './screens/ResultScreen.jsx';
+import DomainSelectionScreen from './screens/DomainSelectionScreen.jsx';
 import KnowYourselfScreen from './screens/KnowYourselfScreen.jsx';
 import KnowYourselfResult from './screens/KnowYourselfResult.jsx';
 import { brand } from './theme/brand.js';
 
 const ease = [0.22, 1, 0.36, 1];
+const AboutScreenLazy = lazy(() => import('./screens/AboutScreen.jsx'));
 
 export default function App() {
   const [screen, setScreen] = useState('intro');
@@ -28,7 +30,13 @@ export default function App() {
   const [kyIndex, setKyIndex] = useState(0);
   const [kyQuestion, setKyQuestion] = useState(null);
   const [kyResult, setKyResult] = useState(null);
+  const [kyDomains, setKyDomains] = useState([]);
   const kyFetchingRef = useRef(false);
+
+  // Fetch domains on mount
+  useEffect(() => {
+    api.kyDomains().then(setKyDomains).catch(() => {});
+  }, []);
 
   // ─── Onboarding ──────────────────────────────────────────
 
@@ -145,10 +153,26 @@ export default function App() {
     []
   );
 
+  // Start generic KY session (kept for backward compat if needed)
   const handleBeginKY = useCallback(async () => {
     setError(null);
     try {
       const session = await api.startKY();
+      setKySessionId(session.sessionId);
+      setKyQuestions(session.questions);
+      setKyIndex(0);
+      setKyQuestion(session.questions[0]);
+      setScreen('kyQuestion');
+    } catch (e) {
+      setError(e.message);
+    }
+  }, []);
+
+  // Start domain assignment
+  const handleStartAssignment = useCallback(async ({ domain, email }) => {
+    setError(null);
+    try {
+      const session = await api.startKYAssignment({ domain, email });
       setKySessionId(session.sessionId);
       setKyQuestions(session.questions);
       setKyIndex(0);
@@ -190,7 +214,7 @@ export default function App() {
   );
 
   const handleKYExplore = useCallback(() => {
-    setScreen('intro');
+    setScreen('kyDomainSelect');
     setKySessionId(null);
     setKyQuestions([]);
     setKyIndex(0);
@@ -293,11 +317,23 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <ResultScreen result={result} onKY={handleBeginKY} />
+            <ResultScreen result={result} onKY={handleKYExplore} onAbout={() => setScreen('about')} />
           </motion.div>
         )}
 
         {/* ── Know Yourself ── */}
+        {screen === 'kyDomainSelect' && (
+          <motion.div
+            key="ky-domain"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <DomainSelectionScreen domains={kyDomains} onBegin={handleStartAssignment} />
+          </motion.div>
+        )}
+
         {screen === 'kyQuestion' && kyQuestion && (
           <motion.div
             key={`ky-q-${kyIndex}`}
@@ -340,7 +376,7 @@ export default function App() {
               />
             </motion.div>
             <h1 className="font-display mt-8 text-3xl font-semibold text-mist sm:text-4xl">
-              Calculating your Know Yourself result
+              Calculating your result
             </h1>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-mist-muted">
               Scoring your 20 responses.
@@ -356,7 +392,21 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <KnowYourselfResult result={kyResult} onExplore={handleKYExplore} />
+            <KnowYourselfResult result={kyResult} sessionId={kySessionId} onExplore={() => setScreen('about')} />
+          </motion.div>
+        )}
+
+        {/* ── About ── */}
+        {screen === 'about' && (
+          <motion.div
+            key="about"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {/* Lazy import - loaded from separate chunk */}
+            <AboutScreenLazy />
           </motion.div>
         )}
       </AnimatePresence>

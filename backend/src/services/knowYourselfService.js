@@ -1,4 +1,4 @@
-import KnowYourselfQuestion from '../models/KnowYourselfQuestion.js';
+import KnowYourselfQuestion, { DOMAIN_KEYS, DOMAIN_LABELS } from '../models/KnowYourselfQuestion.js';
 import KnowYourselfSession from '../models/KnowYourselfSession.js';
 
 function generateSessionId() {
@@ -17,18 +17,11 @@ function shuffle(arr) {
   return a;
 }
 
-export async function startKYSession() {
-  const activeQuestions = await KnowYourselfQuestion.find({ active: true }).lean();
-  if (activeQuestions.length < 20) {
-    throw Object.assign(
-      new Error(`Need at least 20 active Know Yourself questions (found ${activeQuestions.length})`),
-      { status: 400 }
-    );
-  }
-  const selected = shuffle(activeQuestions).slice(0, 20);
-  const snapshot = selected.map((q) => ({
+function snapshotQuestions(questions, source) {
+  return questions.map((q) => ({
     questionId: q._id,
     text: q.text,
+    source,
     options: q.options
       .filter((o) => o.active)
       .map((o) => ({
@@ -37,10 +30,29 @@ export async function startKYSession() {
         score: o.score,
       })),
   }));
+}
+
+export function getAvailableDomains() {
+  return DOMAIN_KEYS.map((key) => ({ key, label: DOMAIN_LABELS[key] }));
+}
+
+// ─── Generic session (unchanged) ──────────────────────────
+
+export async function startKYSession() {
+  const activeQuestions = await KnowYourselfQuestion.find({ active: true, type: 'generic' }).lean();
+  if (activeQuestions.length < 20) {
+    throw Object.assign(
+      new Error(`Need at least 20 active generic Know Yourself questions (found ${activeQuestions.length})`),
+      { status: 400 }
+    );
+  }
+  const selected = shuffle(activeQuestions).slice(0, 20);
+  const snapshot = snapshotQuestions(selected, 'generic');
   const sessionId = generateSessionId();
   const session = await KnowYourselfSession.create({
     sessionId,
     status: 'in_progress',
+    startedAt: new Date(),
     selectedQuestions: snapshot,
     answers: [],
   });
@@ -55,6 +67,74 @@ export async function startKYSession() {
     })),
   };
 }
+
+// ─── Domain assignment ────────────────────────────────────
+
+export async function startKYAssignment(email, domainKey) {
+  if (!email || !email.trim()) {
+    throw Object.assign(new Error('Email is required'), { status: 400 });
+  }
+  const normalizedEmail = email.trim().toLowerCase();
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!EMAIL_RE.test(normalizedEmail)) {
+    throw Object.assign(new Error('A valid email address is required'), { status: 400 });
+  }
+  if (!DOMAIN_KEYS.includes(domainKey)) {
+    throw Object.assign(new Error(`Invalid domain: ${domainKey}`), { status: 400 });
+  }
+
+  const [genericQuestions, domainQuestions] = await Promise.all([
+    KnowYourselfQuestion.find({ active: true, type: 'generic' }).lean(),
+    KnowYourselfQuestion.find({ active: true, type: 'domain', domain: domainKey }).lean(),
+  ]);
+
+  if (genericQuestions.length < 10) {
+    throw Object.assign(
+      new Error(`Need at least 10 active generic questions (found ${genericQuestions.length})`),
+      { status: 400 }
+    );
+  }
+  if (domainQuestions.length < 10) {
+    throw Object.assign(
+      new Error(`Need at least 10 active domain questions for "${DOMAIN_LABELS[domainKey]}" (found ${domainQuestions.length})`),
+      { status: 400 }
+    );
+  }
+
+  const selectedGeneric = shuffle(genericQuestions).slice(0, 10);
+  const selectedDomain = shuffle(domainQuestions).slice(0, 10);
+
+  const genericSnap = snapshotQuestions(selectedGeneric, 'generic');
+  const domainSnap = snapshotQuestions(selectedDomain, 'domain');
+  const allSnap = shuffle([...genericSnap, ...domainSnap]);
+
+  const sessionId = generateSessionId();
+  const now = new Date();
+  const session = await KnowYourselfSession.create({
+    sessionId,
+    status: 'in_progress',
+    email: normalizedEmail,
+    domain: domainKey,
+    startedAt: now,
+    selectedQuestions: allSnap,
+    answers: [],
+  });
+
+  return {
+    sessionId: session.sessionId,
+    domain: domainKey,
+    domainLabel: DOMAIN_LABELS[domainKey],
+    totalQuestions: 20,
+    questions: allSnap.map((q, i) => ({
+      questionIndex: i,
+      questionId: q.questionId,
+      text: q.text,
+      options: q.options.map((o) => ({ optionId: o.optionId, text: o.text })),
+    })),
+  };
+}
+
+// ─── Shared question/answer/result (unchanged logic) ──────
 
 export async function getKYQuestion(sessionId, questionIndex) {
   const session = await KnowYourselfSession.findOne({ sessionId });
@@ -110,8 +190,16 @@ export async function submitKYAnswer(sessionId, { questionIndex, optionId }) {
     else if (totalScore >= 50) { band = 'MODERATE PERFORMANCE'; message = 'Targeted Improvements Needed'; }
     else if (totalScore >= 35) { band = 'SIGNIFICANT GAPS'; message = 'Strategic Overhaul Recommended'; }
     else { band = 'CRITICAL WEAKNESSES'; message = 'Immediate Action Required'; }
-    session.result = { score: totalScore, maxScore, band, message };
+    session.result = {
+      score: totalScore,
+      maxScore,
+      band,
+      message,
+      domain: session.domain || null,
+      domainLabel: session.domain ? DOMAIN_LABELS[session.domain] : null,
+    };
     session.status = 'completed';
+    session.completedAt = new Date();
   }
 
   await session.save();
@@ -125,6 +213,9 @@ export async function getKYResult(sessionId) {
   return {
     sessionId: session.sessionId,
     status: session.status,
+    email: session.email,
+    domain: session.domain,
+    domainLabel: session.domain ? DOMAIN_LABELS[session.domain] : null,
     result: session.result,
     answers: session.answers.map((a) => ({
       questionIndex: a.questionIndex,
@@ -134,3 +225,39 @@ export async function getKYResult(sessionId) {
     })),
   };
 }
+
+function normalizePhone(input) {
+  if (typeof input !== 'string') return null;
+  const digits = input.replace(/[^\d]/g, '');
+  if (digits.length < 7 || digits.length > 15) return null;
+  const plus = /^\+/.test(input.trim()) ? '+' : '';
+  return `${plus}${digits}`;
+}
+
+export async function submitKYContact(sessionId, { phone, contactConsent }) {
+  const session = await KnowYourselfSession.findOne({ sessionId });
+  if (!session) throw Object.assign(new Error('Session not found'), { status: 404 });
+  if (session.status !== 'completed') {
+    throw Object.assign(new Error('Contact can only be submitted after the assessment is completed'), { status: 400 });
+  }
+  if (contactConsent !== true) {
+    throw Object.assign(new Error('Contact consent is required'), { status: 400 });
+  }
+  const normalized = normalizePhone(phone);
+  if (!normalized) {
+    throw Object.assign(new Error('A valid phone number is required'), { status: 400 });
+  }
+  if (session.contactSubmittedAt) {
+    throw Object.assign(new Error('Contact request already submitted'), { status: 409 });
+  }
+  session.phone = normalized;
+  session.contactConsent = true;
+  session.contactSubmittedAt = new Date();
+  await session.save();
+  return {
+    sessionId: session.sessionId,
+    submitted: true,
+    contactSubmittedAt: session.contactSubmittedAt,
+  };
+}
+
