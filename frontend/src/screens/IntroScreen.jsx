@@ -5,6 +5,13 @@ import { brand } from '../theme/brand.js';
 const ease = [0.22, 1, 0.36, 1];
 const six = brand.mark;
 
+// Premium White Shades
+const premiumWhite = {
+  bright: '#FFFFFF',
+  soft: '#F8F6F0',
+  warm: '#F5F0E8',
+};
+
 export default function IntroScreen({ onBegin }) {
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-12 bg-gradient-to-b from-[#0a0a0f] to-[#14141e]">
@@ -39,7 +46,7 @@ export default function IntroScreen({ onBegin }) {
         />
       </motion.div>
 
-      {/* Telugu & Hindi - Top Right */}
+      {/* Telugu & Hindi - Top Right - Premium White - No Color Cycling */}
       <motion.div
         className="absolute top-6 right-6 z-10 flex flex-col items-end gap-0.5"
         initial={{ opacity: 0, x: 20 }}
@@ -47,71 +54,53 @@ export default function IntroScreen({ onBegin }) {
         transition={{ duration: 0.6, ease }}
       >
         <motion.span
-          className="text-lg font-semibold tracking-wider leading-none"
+          className="font-display text-lg font-semibold tracking-wider leading-none"
+          style={{ color: premiumWhite.bright }}
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
         >
-          <motion.span
-            className="inline-block"
-            animate={{
-              color: six,
-              transition: {
-                duration: 6,
-                repeat: Infinity,
-                ease: "linear"
-              }
-            }}
-          >
-            బిర్ గాప్
-          </motion.span>
+          బిర్ గాప్
         </motion.span>
         <motion.span
-          className="text-lg font-semibold tracking-wider leading-none"
+          className="font-display text-lg font-semibold tracking-wider leading-none"
+          style={{ color: premiumWhite.bright }}
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.5 }}
         >
-          <motion.span
-            className="inline-block"
-            animate={{
-              color: six,
-              transition: {
-                duration: 6,
-                repeat: Infinity,
-                ease: "linear",
-                delay: 1
-              }
-            }}
-          >
-            बिरगाप
-          </motion.span>
+          बिरगाप
         </motion.span>
       </motion.div>
 
       {/* Main Content */}
       <div className="relative z-10 flex flex-col items-center">
+        {/* H1 - Hero Title - Premium */}
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.2, ease }}
-          className="font-display max-w-4xl text-center text-4xl font-semibold leading-tight text-white sm:text-6xl md:text-[4.25rem] -mt-8"
+          className="font-display max-w-4xl text-center text-4xl font-bold leading-tight sm:text-6xl md:text-[4.25rem] -mt-8 tracking-[-0.02em]"
+          style={{ color: premiumWhite.bright }}
         >
           Are you a Business Owner
-          <span className="block italic text-white/60">
+          <span className="block font-display font-semibold" style={{ color: premiumWhite.soft }}>
             / Decision Maker?
           </span>
         </motion.h1>
 
+        {/* Body - Premium */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.38, ease }}
-          className="mt-5 max-w-md text-center text-base leading-relaxed text-white/60 sm:text-lg"
+          className="font-display mt-9 max-w-md text-center text-base leading-relaxed sm:text-lg"
+          style={{ color: premiumWhite.warm }}
         >
           Let's understand your business in 30 seconds.
         </motion.p>
 
+        {/* Button - Matching YES/NO size */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -120,7 +109,7 @@ export default function IntroScreen({ onBegin }) {
         >
           <PrimaryButton 
             onClick={onBegin} 
-            className="min-w-[15rem]"
+            className="font-display min-w-[8rem] px-6 py-2.5 text-xl font-bold tracking-[0.05em]"
           >
             Let's Begin
           </PrimaryButton>
@@ -171,12 +160,13 @@ export default function IntroScreen({ onBegin }) {
           ))}
         </motion.div>
 
-        {/* Bottom Text */}
+        {/* Bottom Text - Premium */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1.2 }}
-          className="mt-8 text-[11px] uppercase tracking-[0.3em] text-white/40"
+          className="font-display mt-8 text-[13px] font-medium uppercase tracking-[0.3em]"
+          style={{ color: premiumWhite.soft }}
         >
           Three questions · One clear picture
         </motion.p>

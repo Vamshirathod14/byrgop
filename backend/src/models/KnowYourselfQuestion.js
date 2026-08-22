@@ -39,9 +39,20 @@ const knowYourselfQuestionSchema = new mongoose.Schema(
   {
     text: { type: String, required: true, trim: true },
     type: { type: String, enum: ['generic', 'domain'], default: 'generic' },
-    domain: { type: String, enum: [...DOMAIN_KEYS, null], default: null },
+    domain: { type: String, default: null, trim: true },
     options: { type: [kyOptionSchema], default: [] },
     active: { type: Boolean, default: true },
+    // Result category key (KYCategory). Questions without a category are never
+    // selected for new assessments until an admin assigns one.
+    category: { type: String, default: null, trim: true, lowercase: true },
+    // Optional targeting: null/'' = applies to every business type.
+    businessType: {
+      type: String,
+      enum: [null, '', 'service', 'product', 'ngo'],
+      default: null,
+      lowercase: true,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Timer from '../components/Timer.jsx';
+import PrimaryButton from '../components/PrimaryButton.jsx';
 import { brand } from '../theme/brand.js';
 
 const ease = [0.22, 1, 0.36, 1];
 const six = brand.mark;
+
+// Premium White Shades (same as IntroScreen)
+const premiumWhite = {
+  bright: '#FFFFFF',
+  soft: '#F8F6F0',
+  warm: '#F5F0E8',
+};
 
 function matchOption(question, prefix) {
   return (question.options || []).find((o) =>
@@ -56,50 +64,8 @@ export default function QuestionScreen({ question, index, total, onAnswer, onTim
     setTimeout(() => onAnswer(optionId), 380);
   };
 
-  const answerButton = (label, option, tone, delay) => (
-    <motion.button
-      key={label}
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.5, ease }}
-      whileHover={{ scale: selected ? 1 : 1.03 }}
-      whileTap={{ scale: selected ? 1 : 0.97 }}
-      onClick={() => handleSelect(option?.optionId)}
-      disabled={!!selected}
-      className="relative flex items-center justify-center overflow-hidden rounded-2xl border py-7 font-display text-2xl font-semibold uppercase tracking-[0.14em] transition-colors duration-300 sm:text-3xl"
-      style={{
-        borderColor:
-          selected === option?.optionId 
-            ? cat.color 
-            : 'rgba(255,255,255,0.12)',
-        background:
-          selected === option?.optionId
-            ? `linear-gradient(135deg, ${cat.color}38, transparent)`
-            : 'rgba(255,255,255,0.03)',
-        color: selected === option?.optionId 
-          ? cat.color 
-          : 'rgba(246,247,250,0.72)',
-        boxShadow: selected === option?.optionId 
-          ? `0 0 28px ${cat.color}44` 
-          : 'none',
-      }}
-    >
-      {selected === option?.optionId && (
-        <motion.span
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="absolute right-5 text-xl"
-          style={{ color: cat.color }}
-        >
-          ✓
-        </motion.span>
-      )}
-      {label}
-    </motion.button>
-  );
-
   return (
-    <div className="flex min-h-screen flex-col px-6 py-7 sm:px-10">
+    <div className="flex min-h-screen flex-col px-6 py-7 sm:px-10 bg-gradient-to-b from-[#0a0a0f] to-[#14141e]">
       {/* Logo - Top Left */}
       <motion.div
         className="absolute top-6 left-6 z-10"
@@ -114,7 +80,7 @@ export default function QuestionScreen({ question, index, total, onAnswer, onTim
         />
       </motion.div>
 
-      {/* Telugu & Hindi - Top Right */}
+      {/* Telugu & Hindi - Top Right - Premium White - No Color Cycling */}
       <motion.div
         className="absolute top-6 right-6 z-10 flex flex-col items-end gap-0.5"
         initial={{ opacity: 0, x: 20 }}
@@ -122,50 +88,27 @@ export default function QuestionScreen({ question, index, total, onAnswer, onTim
         transition={{ duration: 0.6, ease }}
       >
         <motion.span
-          className="text-lg font-semibold tracking-wider leading-none"
+          className="font-display text-lg font-semibold tracking-wider leading-none"
+          style={{ color: premiumWhite.bright }}
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
         >
-          <motion.span
-            className="inline-block"
-            animate={{
-              color: six,
-              transition: {
-                duration: 6,
-                repeat: Infinity,
-                ease: "linear"
-              }
-            }}
-          >
-            బిర్ గాప్
-          </motion.span>
+          బిర్ గాప్
         </motion.span>
         <motion.span
-          className="text-lg font-semibold tracking-wider leading-none"
+          className="font-display text-lg font-semibold tracking-wider leading-none"
+          style={{ color: premiumWhite.bright }}
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.5 }}
         >
-          <motion.span
-            className="inline-block"
-            animate={{
-              color: six,
-              transition: {
-                duration: 6,
-                repeat: Infinity,
-                ease: "linear",
-                delay: 1
-              }
-            }}
-          >
-            बिरगाप
-          </motion.span>
+          बिरगाप
         </motion.span>
       </motion.div>
 
       {/* Progress Bar - Top Center */}
-      <header className="flex items-center justify-center">
+      <header className="flex items-center justify-center pt-2">
         <div className="flex items-center gap-2">
           {brand.steps.map((s, i) => (
             <div key={s.key} className="flex items-center gap-2">
@@ -205,13 +148,49 @@ export default function QuestionScreen({ question, index, total, onAnswer, onTim
                 />
               </div>
 
-              <h1 className="font-display max-w-2xl text-balance text-center text-3xl font-semibold leading-snug text-mist sm:text-[2.6rem] sm:leading-tight">
+              {/* Question Text */}
+              <h1 
+                className="font-display max-w-2xl text-balance text-center text-3xl font-bold leading-tight sm:text-4xl md:text-5xl lg:text-5xl tracking-[-0.02em]"
+                style={{ color: premiumWhite.bright }}
+              >
                 {question.text}
               </h1>
 
-              <div className="mt-12 grid w-full max-w-lg grid-cols-2 gap-4">
-                {answerButton('YES', yesOption, 'yes', 0.15)}
-                {answerButton('NO', noOption, 'no', 0.25)}
+              {/* YES/NO Buttons - Smaller size, larger text */}
+              <div className="mt-12 flex w-full max-w-md flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.5, ease }}
+                  className="w-full sm:w-auto"
+                >
+                  <PrimaryButton
+                    onClick={() => handleSelect(yesOption?.optionId)}
+                    disabled={!!selected}
+                    className={`font-display w-full sm:min-w-[8rem] px-6 py-2.5 text-xl font-bold tracking-[0.05em] ${
+                      selected === yesOption?.optionId ? 'ring-2 ring-white/50' : ''
+                    }`}
+                  >
+                    {selected === yesOption?.optionId ? '✓' : ''} YES
+                  </PrimaryButton>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25, duration: 0.5, ease }}
+                  className="w-full sm:w-auto"
+                >
+                  <PrimaryButton
+                    onClick={() => handleSelect(noOption?.optionId)}
+                    disabled={!!selected}
+                    className={`font-display w-full sm:min-w-[8rem] px-6 py-2.5 text-xl font-bold tracking-[0.05em] ${
+                      selected === noOption?.optionId ? 'ring-2 ring-white/50' : ''
+                    }`}
+                  >
+                    {selected === noOption?.optionId ? '✓' : ''} NO
+                  </PrimaryButton>
+                </motion.div>
               </div>
             </motion.div>
           </AnimatePresence>

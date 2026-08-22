@@ -1,8 +1,18 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import PrimaryButton from '../components/PrimaryButton.jsx';
+import api from '../api/client.js';
 import { brand } from '../theme/brand.js';
 
 const ease = [0.22, 1, 0.36, 1];
 const six = brand.mark;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizePhone = (value) => {
+  const digits = (value || '').replace(/[^\d]/g, '');
+  return digits.length >= 7 && digits.length <= 15;
+};
 
 // ─── Config (future-proofed) ──────────────────────────────
 const VIDEO_SOURCE = null; // Set to a video URL when ready
@@ -14,6 +24,28 @@ const founder = {
 };
 
 export default function AboutScreen() {
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const canSubmit = EMAIL_RE.test(email.trim()) && normalizePhone(phone) && !submitting;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await api.submitContact({ email: email.trim(), phone });
+      setSubmitted(true);
+    } catch (e) {
+      setErr(e.message);
+      setSubmitted(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-[#0a0a0f] to-[#14141e]">
       {/* Top gradient line */}
@@ -162,6 +194,82 @@ export default function AboutScreen() {
         >
           {brand.tagline}
         </motion.p>
+
+        {/* Get in Touch */}
+        <motion.section
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.8, ease }}
+          className="mt-16 w-full max-w-xl"
+        >
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] px-6 py-10 sm:px-10">
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-px"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${brand.accent}, transparent)`,
+              }}
+            />
+            <div className="text-center">
+              <h2 className="font-display text-2xl font-semibold text-white sm:text-3xl">
+                Get in Touch
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/50">
+                Want to know more about how BYRGOP can support your business? Reach out and we&rsquo;ll
+                get back to you.
+              </p>
+            </div>
+
+            {submitted ? (
+              <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-8 text-center">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5, ease }}
+                  className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full"
+                  style={{ background: `${brand.palette.green[500]}22` }}
+                >
+                  <span className="text-2xl" style={{ color: brand.palette.green[400] }}>✓</span>
+                </motion.div>
+                <h3 className="font-display text-xl font-semibold text-white">
+                  Thank you. Our team will be in touch with you.
+                </h3>
+              </div>
+            ) : (
+              <div className="mt-8 space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-white/50">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    inputMode="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-xl border border-white/[0.12] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-colors focus:border-white/25"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-white/50">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="+91 98765 43210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full rounded-xl border border-white/[0.12] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition-colors focus:border-white/25"
+                  />
+                </div>
+                {err && <p className="text-xs text-[#f87171]">{err}</p>}
+                <PrimaryButton onClick={handleSubmit} disabled={!canSubmit} className="w-full">
+                  {submitting ? 'Submitting…' : 'Get in Touch'}
+                </PrimaryButton>
+              </div>
+            )}
+          </div>
+        </motion.section>
       </div>
     </div>
   );

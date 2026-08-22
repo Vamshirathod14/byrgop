@@ -21,19 +21,34 @@ byrgop/
 # 1. Backend
 cd backend
 npm install
-npm run seed        # idempotent placeholder content (categories, demo questions, result bands)
-npm run dev         # http://localhost:5000
+cp .env.example .env   # if not present; adjust secrets before running
+npm run seed           # idempotent placeholder content (categories, demo questions, result bands)
+npm run dev            # http://localhost:5000
 
 # 2. Frontend (new terminal)
 cd frontend
 npm install
-npm run dev         # http://localhost:5175
+npm run dev            # http://localhost:5175
 
 # 3. Admin (new terminal)
 cd admin
 npm install
-npm run dev         # http://localhost:5174
+npm run dev            # http://localhost:5174
 ```
+
+### First-run Super Admin
+
+The backend auto-bootstraps an initial **Super Admin** on startup when the env vars are set:
+
+- `ADMIN_JWT_SECRET` — JWT signing secret (change from the default!)
+- `ADMIN_JWT_EXPIRES` — token lifetime (default `8h`)
+- `ADMIN_BCRYPT_ROUNDS` — bcrypt cost (default `12`)
+- `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` — credentials created if no Super Admin exists
+
+The bootstrap is one-time: after the first run, remove `SUPER_ADMIN_EMAIL`/`SUPER_ADMIN_PASSWORD`
+from `.env` to prevent re-creation. Additional admins are managed in the Admin Console
+(**Management → Admins**, Super Admins only) with role- and permission-based access
+(`dashboard.view`, `questions.manage`, `audit.view`, `admins.view`, …).
 
 Each app also builds with `npm run build`.
 
@@ -93,9 +108,14 @@ official BYRGOP logo. The logo's icon mark carries the six brand colours:
 | GET | `/admin/stats` | Session/content overview numbers |
 | GET | `/admin/sessions` / `/admin/sessions/:id` | Review submitted assessments |
 | CRUD | `/admin/categories`, `/admin/questions`, `/admin/results` | Manage content & scoring |
+| POST | `/admin/auth/login` | Admin login (JWT + rate limited) |
+| GET | `/admin/dashboard` | KPI + chart data for the admin console |
+| GET | `/admin/activity` | Audit trail of admin actions |
+| CRUD | `/admin/admins` | Super Admin–only admin account management |
 
-All admin routes accept an optional `x-admin-key` header — set `ADMIN_KEY` in `backend/.env`
-to enable authentication (unset = open in local dev).
+All `/admin/*` routes (except login) require an `Authorization: Bearer <token>` header from
+`POST /admin/auth/login`. Permissions gate each endpoint (e.g. `dashboard.view`, `sessions.view`).
+Every mutating admin action is written to the audit log (`AuditLog`)
 
 ## Notes
 

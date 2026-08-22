@@ -23,7 +23,10 @@ export const api = {
     request(`/assessments/${sessionId}/timeout`, { method: 'POST', body: JSON.stringify(payload) }),
   getResult: (sessionId) => request(`/assessments/${sessionId}/result`),
 
-  kyDomains: () => request('/know-yourself/domains'),
+  // Filtered server-side by the BusinessType → Domain relationship.
+  domains: (businessTypeKey) =>
+    request(`/domains${businessTypeKey ? `?businessType=${encodeURIComponent(businessTypeKey)}` : ''}`),
+  kyMeta: () => request('/know-yourself/meta'),
   startKY: () => request('/know-yourself', { method: 'POST' }),
   startKYAssignment: (payload) =>
     request('/know-yourself/assignment', { method: 'POST', body: JSON.stringify(payload) }),
@@ -33,6 +36,15 @@ export const api = {
   kyResult: (sessionId) => request(`/know-yourself/${sessionId}/result`),
   submitKYContact: (sessionId, payload) =>
     request(`/know-yourself/${sessionId}/contact`, { method: 'POST', body: JSON.stringify(payload) }),
+  submitKYProBono: (sessionId, payload) =>
+    request(`/know-yourself/${sessionId}/pro-bono`, { method: 'POST', body: JSON.stringify(payload) }),
+  submitContact: (payload) =>
+    request('/contact', { method: 'POST', body: JSON.stringify(payload) }),
+  bulkUploadKYQuestions: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/admin/know-yourself/bulk-upload', { method: 'POST', body: formData });
+  },
 };
 
 export default api;

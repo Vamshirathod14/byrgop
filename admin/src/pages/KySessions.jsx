@@ -3,6 +3,8 @@ import { api } from '../api/client.js';
 
 const STATUS = ['all', 'in_progress', 'completed', 'abandoned'];
 
+const PRO_BONO = ['all', 'requested', 'not_requested'];
+
 const DOMAIN_LABELS = {
   manufacturing: 'Manufacturing & Industrial Operations',
   retail_ecommerce: 'Retail & E-Commerce',
@@ -21,15 +23,24 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleString() : '—');
 export default function KySessions() {
   const [sessions, setSessions] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [proBono, setProBono] = useState('all');
   const [err, setErr] = useState(null);
+
+  const query = () => {
+    const params = new URLSearchParams();
+    if (filter !== 'all') params.set('status', filter);
+    if (proBono !== 'all') params.set('proBono', proBono);
+    const s = params.toString();
+    return s ? `?${s}` : undefined;
+  };
 
   const load = useCallback(async () => {
     try {
-      setSessions(await api.kySessions(filter === 'all' ? undefined : filter));
+      setSessions(await api.kySessions(query()));
     } catch (e) {
       setErr(e.message);
     }
-  }, [filter]);
+  }, [filter, proBono]);
 
   useEffect(() => {
     load();
@@ -39,23 +50,45 @@ export default function KySessions() {
     <div>
       <h1 className="font-display text-3xl font-semibold text-mist">Know Yourself Submissions</h1>
       <p className="mt-1 text-sm text-mist-muted">
-        Domain assignment sessions — email, phone, domain, status, score, consent and timestamps.
+        Domain assignment sessions — email, phone, domain, status, score, consent, pro bono requests and timestamps.
       </p>
 
-      <div className="mt-4 flex gap-2">
-        {STATUS.map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={`rounded-full px-4 py-1.5 text-xs capitalize transition-colors ${
-              filter === s
-                ? 'bg-brand-accent text-ink-950 font-semibold'
-                : 'border border-white/10 text-mist-muted hover:text-mist'
-            }`}
-          >
-            {s.replace('_', ' ')}
-          </button>
-        ))}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="flex gap-2">
+          {STATUS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={`rounded-full px-4 py-1.5 text-xs capitalize transition-colors ${
+                filter === s
+                  ? 'bg-brand-accent text-ink-950 font-semibold'
+                  : 'border border-white/10 text-mist-muted hover:text-mist'
+              }`}
+            >
+              {s.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-mist-muted">Pro Bono:</span>
+          <div className="flex gap-1 rounded-full border border-white/10 p-0.5">
+            {PRO_BONO.map((p) => (
+              <button
+                key={p}
+                onClick={() => setProBono(p)}
+                className={`rounded-full px-3 py-1 text-xs capitalize transition-colors ${
+                  proBono === p
+                    ? p === 'requested'
+                      ? 'bg-[#4ade80] text-ink-950 font-semibold'
+                      : 'bg-brand-accent text-ink-950 font-semibold'
+                    : 'text-mist-muted hover:text-mist'
+                }`}
+              >
+                {p.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {err && <p className="mt-3 text-sm text-[#f87171]">{err}</p>}
@@ -71,15 +104,19 @@ export default function KySessions() {
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Score</th>
               <th className="px-4 py-3">Contact Requested</th>
+              <th className="px-4 py-3">Pro Bono</th>
+              <th className="px-4 py-3">Pro Bono Email</th>
+              <th className="px-4 py-3">Pro Bono Phone</th>
               <th className="px-4 py-3">Started At</th>
               <th className="px-4 py-3">Completed At</th>
               <th className="px-4 py-3">Contact Submitted At</th>
+              <th className="px-4 py-3">Pro Bono Submitted At</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {sessions.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-6 text-center text-mist-muted">
+                <td colSpan={13} className="px-4 py-6 text-center text-mist-muted">
                   No submissions.
                 </td>
               </tr>
@@ -113,9 +150,21 @@ export default function KySessions() {
                     <span className="badge bg-white/10 text-mist-muted">No</span>
                   )}
                 </td>
+                <td className="px-4 py-3">
+                  {s.proBonoRequested ? (
+                    <span className="badge bg-[#4ade80] px-3 py-1 font-bold text-ink-950 shadow-[0_0_16px_rgba(74,222,128,0.35)]">
+                      ★ REQUESTED
+                    </span>
+                  ) : (
+                    <span className="badge bg-white/10 text-mist-muted">Not requested</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-mist">{s.proBonoEmail || '—'}</td>
+                <td className="px-4 py-3 text-mist">{s.proBonoPhone || '—'}</td>
                 <td className="px-4 py-3 text-mist-muted">{fmtDate(s.startedAt)}</td>
                 <td className="px-4 py-3 text-mist-muted">{fmtDate(s.completedAt)}</td>
                 <td className="px-4 py-3 text-mist-muted">{fmtDate(s.contactSubmittedAt)}</td>
+                <td className="px-4 py-3 text-mist-muted">{fmtDate(s.proBonoSubmittedAt)}</td>
               </tr>
             ))}
           </tbody>

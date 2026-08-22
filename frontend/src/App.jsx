@@ -6,6 +6,7 @@ import IntroScreen from './screens/IntroScreen.jsx';
 import QuestionScreen from './screens/QuestionScreen.jsx';
 import ResultScreen from './screens/ResultScreen.jsx';
 import DomainSelectionScreen from './screens/DomainSelectionScreen.jsx';
+import BusinessTypeScreen from './screens/BusinessTypeScreen.jsx';
 import KnowYourselfScreen from './screens/KnowYourselfScreen.jsx';
 import KnowYourselfResult from './screens/KnowYourselfResult.jsx';
 import { brand } from './theme/brand.js';
@@ -30,13 +31,11 @@ export default function App() {
   const [kyIndex, setKyIndex] = useState(0);
   const [kyQuestion, setKyQuestion] = useState(null);
   const [kyResult, setKyResult] = useState(null);
-  const [kyDomains, setKyDomains] = useState([]);
+  const [kyBusinessType, setKyBusinessType] = useState(null);
+  // optionId per question index — keeps selections when navigating back.
+  const [kyAnswers, setKyAnswers] = useState([]);
+  const [kySubmitting, setKySubmitting] = useState(false);
   const kyFetchingRef = useRef(false);
-
-  // Fetch domains on mount
-  useEffect(() => {
-    api.kyDomains().then(setKyDomains).catch(() => {});
-  }, []);
 
   // ─── Onboarding ──────────────────────────────────────────
 
@@ -168,28 +167,42 @@ export default function App() {
     }
   }, []);
 
-  // Start domain assignment
+  // Start domain assignment (business type chosen on the previous screen)
   const handleStartAssignment = useCallback(async ({ domain, email }) => {
     setError(null);
     try {
-      const session = await api.startKYAssignment({ domain, email });
+      const session = await api.startKYAssignment({
+        domain,
+        email,
+        businessType: kyBusinessType?.key,
+      });
       setKySessionId(session.sessionId);
       setKyQuestions(session.questions);
       setKyIndex(0);
       setKyQuestion(session.questions[0]);
+      setKyAnswers(new Array(session.questions.length).fill(undefined));
       setScreen('kyQuestion');
     } catch (e) {
       setError(e.message);
     }
-  }, []);
+  }, [kyBusinessType]);
 
-  const handleKYAnswer = useCallback(
+  // Next / Submit Assessment: persist the answer server-side (upsert), then
+  // advance. The final question triggers result calculation.
+  const handleKYNext = useCallback(
     async (optionId) => {
-      if (!kyQuestion || !kySessionId) return;
+      if (!kyQuestion || !kySessionId || kySubmitting) return;
+      setKySubmitting(true);
+      setError(null);
       try {
         const res = await api.submitKYAnswer(kySessionId, {
           questionIndex: kyIndex,
           optionId,
+        });
+        setKyAnswers((prev) => {
+          const next = [...prev];
+          next[kyIndex] = optionId;
+          return next;
         });
 
         if (res.complete) {
@@ -201,25 +214,38 @@ export default function App() {
           } catch (e) {
             setError(e.message);
           }
-        } else {
-          const next = kyIndex + 1;
-          setKyIndex(next);
-          setKyQuestion(kyQuestions[next]);
+        } else if (kyIndex + 1 < kyQuestions.length) {
+          const nextIdx = kyIndex + 1;
+          setKyIndex(nextIdx);
+          setKyQuestion(kyQuestions[nextIdx]);
         }
       } catch (e) {
         setError(e.message);
+      } finally {
+        setKySubmitting(false);
       }
     },
-    [kyQuestion, kySessionId, kyIndex, kyQuestions]
+    [kyQuestion, kySessionId, kyIndex, kyQuestions, kySubmitting]
   );
 
+  // Previous: pure client-side navigation — the stored selection is shown
+  // again because it lives in kyAnswers.
+  const handleKYPrevious = useCallback(() => {
+    if (kySubmitting || kyIndex === 0) return;
+    const prevIdx = kyIndex - 1;
+    setKyIndex(prevIdx);
+    setKyQuestion(kyQuestions[prevIdx]);
+  }, [kyIndex, kyQuestions, kySubmitting]);
+
   const handleKYExplore = useCallback(() => {
-    setScreen('kyDomainSelect');
+    setScreen('kyBusinessType');
+    setKyBusinessType(null);
     setKySessionId(null);
     setKyQuestions([]);
     setKyIndex(0);
     setKyQuestion(null);
     setKyResult(null);
+    setKyAnswers([]);
   }, []);
 
   // ─── Error auto-clear ────────────────────────────────────
@@ -322,6 +348,23 @@ export default function App() {
         )}
 
         {/* ── Know Yourself ── */}
+        {screen === 'kyBusinessType' && (
+          <motion.div
+            key="ky-business-type"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <BusinessTypeScreen
+              onSelect={(key, label) => {
+                setKyBusinessType({ key, label });
+                setScreen('kyDomainSelect');
+              }}
+            />
+          </motion.div>
+        )}
+
         {screen === 'kyDomainSelect' && (
           <motion.div
             key="ky-domain"
@@ -330,7 +373,11 @@ export default function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <DomainSelectionScreen domains={kyDomains} onBegin={handleStartAssignment} />
+            <DomainSelectionScreen
+              businessType={kyBusinessType}
+              onBack={() => setScreen('kyBusinessType')}
+              onBegin={handleStartAssignment}
+            />
           </motion.div>
         )}
 
@@ -344,9 +391,22 @@ export default function App() {
           >
             <KnowYourselfScreen
               question={kyQuestion}
-              index={kyIndex}
-              total={20}
-              onAnswer={handleKYAnswer}
+              answeredCount={kyAnswers.filter(Boolean).length}
+              answeredHere={!!kyAnswers[kyIndex]}
+              total={kyQuestions.length || 18}
+              selected={kyAnswers[kyIndex] ?? null}
+              onSelect={(optionId) =>
+                setKyAnswers((prev) => {
+                  const next = [...prev];
+                  next[kyIndex] = optionId;
+                  return next;
+                })
+              }
+              onNext={handleKYNext}
+              onPrevious={handleKYPrevious}
+              isFirst={kyIndex === 0}
+              isLast={kyIndex === kyQuestions.length - 1}
+              busy={kySubmitting}
             />
           </motion.div>
         )}
@@ -379,7 +439,7 @@ export default function App() {
               Calculating your result
             </h1>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-mist-muted">
-              Scoring your 20 responses.
+              Scoring your 18 responses across six business dimensions.
             </p>
           </motion.div>
         )}

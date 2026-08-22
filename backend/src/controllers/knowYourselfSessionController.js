@@ -2,6 +2,10 @@ import * as kyService from '../services/knowYourselfService.js';
 import KnowYourselfSession from '../models/KnowYourselfSession.js';
 import { asyncHandler } from '../middleware/errors.js';
 
+export const getKYMeta = asyncHandler(async (_req, res) => {
+  res.json(await kyService.getKYMeta());
+});
+
 export const startKYSession = async (req, res, next) => {
   try {
     const session = await kyService.startKYSession();
@@ -11,8 +15,8 @@ export const startKYSession = async (req, res, next) => {
 
 export const startKYAssignment = async (req, res, next) => {
   try {
-    const { email, domain } = req.body;
-    const session = await kyService.startKYAssignment(email, domain);
+    const { email, domain, businessType } = req.body;
+    const session = await kyService.startKYAssignment(email, domain, businessType);
     res.status(201).json(session);
   } catch (err) { next(err); }
 };
@@ -46,14 +50,23 @@ export const submitKYContact = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const submitKYProBono = async (req, res, next) => {
+  try {
+    const result = await kyService.submitKYProBono(req.params.sessionId, req.body);
+    res.status(201).json(result);
+  } catch (err) { next(err); }
+};
+
 export const listKYSessions = asyncHandler(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
   const filter = {};
   if (req.query.status && req.query.status !== 'all') filter.status = req.query.status;
   if (req.query.domain && req.query.domain !== 'all') filter.domain = req.query.domain;
+  if (req.query.proBono === 'requested') filter.proBonoRequested = true;
+  if (req.query.proBono === 'not_requested') filter.proBonoRequested = false;
   const sessions = await KnowYourselfSession.find(filter)
     .sort({ startedAt: -1 })
     .limit(limit)
-    .select('sessionId email phone domain status result contactConsent contactSubmittedAt startedAt completedAt');
+    .select('sessionId email phone domain domainLabel status result contactConsent contactSubmittedAt proBonoRequested proBonoEmail proBonoPhone proBonoConsent proBonoSubmittedAt startedAt completedAt');
   res.json(sessions);
 });

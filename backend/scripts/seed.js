@@ -5,6 +5,8 @@ import Stage from '../src/models/Stage.js';
 import Question from '../src/models/Question.js';
 import ResultContent from '../src/models/ResultContent.js';
 import AssessmentSession from '../src/models/AssessmentSession.js';
+import Domain from '../src/models/Domain.js';
+import { DOMAIN_KEYS, DOMAIN_LABELS } from '../src/models/KnowYourselfQuestion.js';
 
 const SEED_MARK = 'BYRGOP-DEMO';
 
@@ -168,6 +170,15 @@ async function seed() {
   await connectDB();
   console.log('[seed] starting...');
 
+  // Know Yourself business domains (idempotent upsert by slug)
+  for (const slug of DOMAIN_KEYS) {
+    await Domain.updateOne(
+      { slug },
+      { $set: { name: DOMAIN_LABELS[slug], active: true } },
+      { upsert: true }
+    );
+  }
+
   for (const s of stages) {
     await Stage.updateOne({ key: s.key }, { $set: { ...s, active: true } }, { upsert: true });
   }
@@ -219,6 +230,7 @@ async function seed() {
 
   console.log('[seed] categories:', Object.keys(catDocs).length);
   console.log('[seed] stages:', stageKeys.size);
+  console.log('[seed] domains:', DOMAIN_KEYS.length);
   console.log('[seed] demo questions:',
     Object.values(demoQuestions).reduce((s, qs) => s + qs.length, 0));
   console.log('[seed] result bands:', resultBands.length * 3);

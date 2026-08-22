@@ -12,17 +12,21 @@ const empty = {
   text: '',
   type: 'generic',
   domain: '',
+  category: '',
+  businessType: '',
   active: true,
   options: defaultOptions.map((o) => ({ ...o })),
 };
 
-function KYQuestionForm({ initial, domains, onCancel, onSaved }) {
+function KYQuestionForm({ initial, domains, categories = [], businessTypes = [], onCancel, onSaved }) {
   const [form, setForm] = useState(() =>
     initial
       ? {
           text: initial.text,
           type: initial.type || 'generic',
           domain: initial.domain || '',
+          category: initial.category || '',
+          businessType: initial.businessType || '',
           active: initial.active,
           options: initial.options.map((o) => ({ text: o.text, score: o.score, active: o.active })),
         }
@@ -35,6 +39,12 @@ function KYQuestionForm({ initial, domains, onCancel, onSaved }) {
   const setOption = (i, patch) =>
     set({ options: form.options.map((o, idx) => (idx === i ? { ...o, ...patch } : o)) });
 
+  // Domains belonging to the currently selected business type (DB relationship).
+  const selectedBt = businessTypes.find((bt) => bt.key === form.businessType);
+  const domainsForType = selectedBt
+    ? domains.filter((d) => String(d.businessTypeId || '') === String(selectedBt._id))
+    : domains;
+
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -44,6 +54,8 @@ function KYQuestionForm({ initial, domains, onCancel, onSaved }) {
         text: form.text,
         type: form.type,
         domain: form.type === 'domain' ? form.domain : null,
+        category: form.category || null,
+        businessType: form.businessType || null,
         active: form.active,
         options: form.options.map((o) => ({
           text: o.text,
@@ -51,6 +63,11 @@ function KYQuestionForm({ initial, domains, onCancel, onSaved }) {
           active: o.active !== false,
         })),
       };
+      if (!payload.category) {
+        setErr('Select a result category.');
+        setSaving(false);
+        return;
+      }
       if (initial?._id) await api.updateKYQuestion(`/admin/know-yourself/${initial._id}`, payload);
       else await api.createKYQuestion('/admin/know-yourself', payload);
       onSaved();
@@ -81,33 +98,101 @@ function KYQuestionForm({ initial, domains, onCancel, onSaved }) {
           <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-mist-muted">
             Question Type
           </label>
-          <select
-            className="input"
-            value={form.type}
-            onChange={(e) => set({ type: e.target.value, domain: e.target.value === 'generic' ? '' : form.domain })}
-          >
-            <option value="generic">Generic</option>
-            <option value="domain">Domain</option>
-          </select>
+        <select
+          className="input"
+          value={form.type}
+          onChange={(e) => set({ type: e.target.value, domain: e.target.value === 'generic' ? '' : form.domain })}
+        >
+          <option value="generic">Generic</option>
+          <option value="domain">Domain</option>
+        </select>
         </div>
         {form.type === 'domain' && (
-          <div>
-            <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-mist-muted">
-              Domain
-            </label>
-            <select
-              className="input"
-              value={form.domain}
-              onChange={(e) => set({ domain: e.target.value })}
-              required
-            >
-              <option value="" disabled>Select domain</option>
-              {domains.map((d) => (
-                <option key={d.key} value={d.key}>{d.label}</option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div>
+              <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-mist-muted">
+                Business Type
+              </label>
+              <select
+                className="input"
+                value={form.businessType}
+                onChange={(e) =>
+                  set({
+                    businessType: e.target.value,
+                    domain: '', // reset — domain must belong to the chosen type
+                  })
+                }
+                required
+              >
+                <option value="" disabled>Select business type</option>
+                {businessTypes.filter((bt) => bt.active).map((bt) => (
+                  <option key={bt._id} value={bt.key}>
+                    {bt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-mist-muted">
+                Domain
+              </label>
+              <select
+                className="input"
+                value={form.domain}
+                onChange={(e) => set({ domain: e.target.value })}
+                required
+              >
+                <option value="" disabled>
+                  {form.businessType ? 'Select domain' : 'Select business type first'}
+                </option>
+                {domainsForType.map((d) => (
+                  <option key={d._id || d.slug} value={d.slug}>
+                    {d.name}{d.active === false ? ' (inactive)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
         )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-mist-muted">
+            Result Category
+          </label>
+          <select
+            className="input"
+            value={form.category}
+            onChange={(e) => set({ category: e.target.value })}
+            required
+          >
+            <option value="" disabled>Select category</option>
+            {categories.filter((c) => c.active).map((c) => (
+              <option key={c._id} value={c.key}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-mist-muted">
+            Business Type {form.type === 'generic' && <span className="normal-case text-mist-muted/60">(optional)</span>}
+          </label>
+          <select
+            className="input"
+            value={form.businessType}
+            onChange={(e) =>
+              set({ businessType: e.target.value, domain: form.type === 'domain' ? '' : form.domain })
+            }
+            disabled={form.type === 'domain'}
+          >
+            <option value="">Any business type</option>
+            {businessTypes.filter((bt) => bt.active).map((bt) => (
+              <option key={bt._id} value={bt.key}>{bt.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div>
@@ -184,6 +269,8 @@ function KYQuestionForm({ initial, domains, onCancel, onSaved }) {
 export default function KnowYourselfQuestions() {
   const [questions, setQuestions] = useState([]);
   const [domains, setDomains] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [businessTypes, setBusinessTypes] = useState([]);
   const [editing, setEditing] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [filterType, setFilterType] = useState('all');
@@ -191,9 +278,17 @@ export default function KnowYourselfQuestions() {
 
   const load = useCallback(async () => {
     try {
-      const [qs, doms] = await Promise.all([api.kyQuestions(), api.kyDomains()]);
-      setQuestions(qs);
-      setDomains(doms);
+      const [qs, doms, cats, bts] = await Promise.all([
+        api.kyQuestions(),
+        api.domains(),
+        api.kyCategories().catch(() => []),
+        api.businessTypes().catch(() => []),
+      ]);
+      setQuestions(Array.isArray(qs) ? qs : []);
+      setDomains(Array.isArray(doms) ? doms : []);
+      setCategories(Array.isArray(cats) ? cats : []);
+      setBusinessTypes(Array.isArray(bts) ? bts : []);
+      setErr(null);
     } catch (e) {
       setErr(e.message);
     }
@@ -213,19 +308,26 @@ export default function KnowYourselfQuestions() {
     }
   };
 
-  const filtered = filterType === 'all' ? questions : questions.filter((q) => q.type === filterType);
+  const filtered = questions.filter((q) => {
+    if (filterType === 'all') return true;
+    if (filterType === 'active') return q.active;
+    if (filterType === 'inactive') return !q.active;
+    const t = q.type === 'domain' ? 'domain' : 'generic';
+    return t === filterType;
+  });
   const genericCount = questions.filter((q) => q.type === 'generic' || !q.type).length;
   const domainCount = questions.filter((q) => q.type === 'domain').length;
   const activeGeneric = questions.filter((q) => (q.type === 'generic' || !q.type) && q.active).length;
   const activeDomain = questions.filter((q) => q.type === 'domain' && q.active).length;
 
-  const domainLabel = (key) => domains.find((d) => d.key === key)?.label || key;
+  const domainLabel = (slug) => domains.find((d) => d.slug === slug)?.name || slug;
+  const categoryOf = (key) => categories.find((c) => c.key === key);
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-mist">Know Yourself</h1>
+          <h1 className="font-display text-3xl font-semibold text-mist">Know Yourself Questions</h1>
           <p className="mt-1 text-sm text-mist-muted">
             {genericCount} generic ({activeGeneric} active) · {domainCount} domain ({activeDomain} active)
             {activeGeneric < 10 && (
@@ -237,7 +339,7 @@ export default function KnowYourselfQuestions() {
           </p>
         </div>
         <button className="btn-primary" onClick={() => setShowCreate((v) => !v)}>
-          {showCreate ? 'Close' : '+ New question'}
+          {showCreate ? 'Close' : '+ Add Question'}
         </button>
       </div>
 
@@ -247,6 +349,8 @@ export default function KnowYourselfQuestions() {
           { key: 'all', label: 'All' },
           { key: 'generic', label: 'Generic' },
           { key: 'domain', label: 'Domain' },
+          { key: 'active', label: 'Active' },
+          { key: 'inactive', label: 'Inactive' },
         ].map((f) => (
           <button
             key={f.key}
@@ -268,6 +372,8 @@ export default function KnowYourselfQuestions() {
         <div className="mt-5">
           <KYQuestionForm
             domains={domains}
+            businessTypes={businessTypes}
+            categories={categories}
             onCancel={() => setShowCreate(false)}
             onSaved={async () => {
               setShowCreate(false);
@@ -285,6 +391,8 @@ export default function KnowYourselfQuestions() {
               <KYQuestionForm
                 initial={q}
                 domains={domains}
+                businessTypes={businessTypes}
+                categories={categories}
                 onCancel={() => setEditing(null)}
                 onSaved={async () => {
                   setEditing(null);
@@ -305,6 +413,17 @@ export default function KnowYourselfQuestions() {
                     {q.type === 'domain' && q.domain && (
                       <span className="badge bg-white/10 text-mist text-[10px]">
                         {domainLabel(q.domain)}
+                      </span>
+                    )}
+                    {q.category && (
+                      <span
+                        className="badge text-[10px]"
+                        style={{
+                          background: `${categoryOf(q.category)?.color || '#0A78CF'}1f`,
+                          color: categoryOf(q.category)?.color || '#0A78CF',
+                        }}
+                      >
+                        {categoryOf(q.category)?.name || q.category}
                       </span>
                     )}
                     <span
